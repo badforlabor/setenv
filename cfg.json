@@ -1,0 +1,22 @@
+{
+	"op": "set",
+	"args" : [
+	{
+		"op":"set",
+		"key": "KeyA",
+		"value": "ValueA"
+	},
+	{
+		"op":"head",
+		"key": "KeyA",
+		"value": "Value1;Value2;"
+	},
+	{
+		"op":"tail",
+		"key": "KeyA",
+		"value": "Value3;"
+	}
+	]
+}
+
+
