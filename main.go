@@ -25,9 +25,17 @@ const(
 )
 
 var cfgPath = flag.String("c", "cfg.json", "config file name. example: -c=cfg.json")
+var h = flag.Bool("h", false, "show helper. example: -h")
 
 func main() {
 	flag.Parse()
+
+	if *h {
+		fmt.Println("op关键字为：set, head, tail, del")
+
+		systemPause()
+		return
+	}
 
 	// 读取配置文件
 	workDir := GetExecPath()
