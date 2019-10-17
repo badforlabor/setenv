@@ -7,6 +7,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"golang.org/x/sys/windows/registry"
 	"os"
@@ -20,18 +21,25 @@ const(
 	OpSet = "set"
 	OpHead = "head"
 	OpTail = "tail"
+	OpDel = "del"
 )
 
+var cfgPath = flag.String("c", "cfg.json", "config file name. example: -c=cfg.json")
+
 func main() {
+	flag.Parse()
+
 	// 读取配置文件
 	workDir := GetExecPath()
 
 	cfg := EnvConfig{}
-	filePath := filepath.Join(workDir, "cfg.json")
+
+	filePath := filepath.Join(workDir, *cfgPath)
 
 	b := loadCfg(filePath, &cfg)
 	if !b {
-		panic("没有配置文件")
+		fmt.Println("没有配置文件")
+		systemPause()
 		return
 	}
 
@@ -39,6 +47,7 @@ func main() {
 	if cfg.Op == OpSet {
 		// 先备份所有涉及到的环境变量
 		// 然后在设置
+		fmt.Println("备份原有的环境变量:")
 		restoreInfo := EnvConfig{}
 		restoreInfo.Op = OpRestore
 		for _, v := range cfg.Args {
@@ -55,7 +64,7 @@ func main() {
 		if len(restoreInfo.Args) > 0 {
 			hostname, _ := os.Hostname()
 			filename := fmt.Sprintf("%s-%s.json", hostname, time.Now().Format("20060102-150405"))
-			fmt.Printf("filename:%s\n", filename)
+			fmt.Printf("\tfilename:%s\n", filename)
 			saveCfg(filename, restoreInfo)
 		}
 
@@ -63,30 +72,34 @@ func main() {
 		for _, v := range cfg.Args {
 			DoAction(v)
 		}
-
+		RefreshRegister()
 	} else if cfg.Op == OpRestore {
-
+		fmt.Println("执行Restore.")
+		// 处理环境变量
+		for _, v := range cfg.Args {
+			DoAction(v)
+		}
+		RefreshRegister()
 	}
 
-	pause()
+	systemPause()
 }
 func DoAction(one OneEnvOp) {
 	if one.Op == OpSet {
 		SetEnv(one.Key, one.Value)
-	} else if one.Op == OpHead {
+	} else if one.Op == OpDel {
+		DeleteEnv(one.Key)
+	} else {
 		oldValue := GetEnv(one.Key)
-		valueList := strings.Split(oldValue, ";")
-		newValueList := strings.Split(one.Value, ";")
+		valueList := RemoveEmpty(strings.Split(oldValue, ";"))
+		newValueList := RemoveEmpty(strings.Split(one.Value, ";"))
 		for i := len(newValueList)-1; i >= 0; i-- {
-			PutToHead(&valueList, newValueList[i])
-		}
-		SetEnv(one.Key, strings.Join(valueList, ";"))
-	} else if one.Op == OpTail {
-		oldValue := GetEnv(one.Key)
-		valueList := strings.Split(oldValue, ";")
-		newValueList := strings.Split(one.Value, ";")
-		for i := len(newValueList)-1; i >= 0; i-- {
-			PutToTail(&valueList, newValueList[i])
+			if one.Op == OpTail {
+				PutToTail(&valueList, newValueList[i])
+			}
+			if one.Op == OpHead {
+				PutToHead(&valueList, newValueList[i])
+			}
 		}
 		SetEnv(one.Key, strings.Join(valueList, ";"))
 	}
@@ -107,6 +120,13 @@ func SetEnv(key string, value string)  {
 	user, err := registry.OpenKey(registry.CURRENT_USER, "Environment", registry.ALL_ACCESS)
 	if err == nil {
 		user.SetStringValue(key, value)
+		user.Close()
+	}
+}
+func DeleteEnv(key string) {
+	user, err := registry.OpenKey(registry.CURRENT_USER, "Environment", registry.ALL_ACCESS)
+	if err == nil {
+		user.DeleteValue(key)
 		user.Close()
 	}
 }

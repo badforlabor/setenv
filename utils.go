@@ -7,6 +7,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -35,7 +36,7 @@ func loadCfg(fullname string, v interface{}) bool {
 	}
 	err = json.Unmarshal(data, v)
 	if err != nil {
-		fmt.Println("can't load game list.")
+		fmt.Println("unmarshal json failed.", err.Error())
 		return false
 	}
 	return true
@@ -67,6 +68,15 @@ func PutToHead(values *[]string, v string) {
 	ret = append(ret, pending...)
 	*values = ret
 }
+func RemoveEmpty(values []string) []string {
+	var ret []string
+	for _, v := range values {
+		if v != "" {
+			ret = append(ret, v)
+		}
+	}
+	return ret
+}
 func PutToTail(values *[]string, v string) {
 	if v == "" {
 		return
@@ -87,9 +97,7 @@ func findIdx(list []string, v string) int {
 }
 
 func systemPause() {
-	fmt.Println("按任意键继续...")
-	b := make([]byte, 1)
-	os.Stdin.Read(b)
-	//bufio.NewReader(os.Stdin).ReadBytes('\n')
+	fmt.Println("按回车键继续...")
+	bufio.NewReader(os.Stdin).ReadBytes('\n')
 	//bufio.NewReader(os.Stdin).ReadByte()
 }

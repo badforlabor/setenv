@@ -11,7 +11,7 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-func init() {
+func init2() {
 	if err := termbox.Init(); err != nil {
 		panic(err)
 	}
